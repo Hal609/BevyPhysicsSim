@@ -116,6 +116,7 @@ impl AABB {
         translation_axis
     }
 
+
     pub fn overlap_push_in_direction(&self, other: &AABB, direction: Vec3) -> Vec3 {
         // Normalize the direction vector
         let norm_direction = direction.normalize();
@@ -167,6 +168,6 @@ impl AABB {
             min_projection = z_projection;
         }
 
-        return min_projection *  norm_direction;
+        return min_projection * norm_direction;
     }
 }

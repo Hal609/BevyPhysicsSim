@@ -21,7 +21,7 @@ pub fn setup(
         ..default()
     },
     Collidable,
-    AABB::new( Vec3::new(0.0, 0.0, 0.0),  Vec3::new(25.0, 0.0, 25.0))));
+    AABB::new( Vec3::new(0.0, 0.0, 0.0),  Vec3::new(25.0, 0.01, 25.0))));
 
 
     // Cube
@@ -77,10 +77,6 @@ pub fn apply_motion( time: Res<Time>,
         position.0 += velocity.0 * time.delta_seconds();
         transform.translation = position.0;
         aabb.update(position.0);
-        // if position.0.y <= 0.5 {
-        //     position.0.y = 0.5;
-        //     velocity.0.y = -velocity.0.y * 0.7;
-        // }
     }
 }
 
@@ -104,10 +100,20 @@ pub fn reset_force(
 }
 
 pub fn check_collisions(
-    mut query: Query<(Entity, &mut AABB, Option<&Movable>, Option<&Collidable>, Option<&mut Velocity>, &mut Transform)>,
+    mut query: Query<(
+        Entity, 
+        &mut AABB, 
+        Option<&Movable>, 
+        Option<&Collidable>, 
+        Option<&mut Velocity>, 
+        Option<&mut Position>
+    )>,
 ) {
     let mut combinations = query.iter_combinations_mut();
-    while let Some([(entity1, mut aabb1, movable1, collidable1, velocity1, mut transform1), (entity2, mut aabb2, movable2, collidable2, velocity2, mut transform2)]) = combinations.fetch_next() {
+    while let Some([
+        (entity1, mut aabb1, movable1, collidable1, velocity1, mut position1), 
+        (entity2, mut aabb2, movable2, collidable2, velocity2, mut position2)
+    ]) = combinations.fetch_next() {
         if aabb1.intersects(&aabb2) {
             if movable1.is_some() && movable2.is_some() {
                 println!("Collision detected between two Movable entities: {:?} and {:?}", entity1, entity2);
@@ -119,8 +125,9 @@ pub fn check_collisions(
                     let normal = calculate_collision_normal(&aabb1, &aabb2);
                     velocity.0 = reflect_velocity(velocity.0, normal) * 0.9;
                     let overlap = aabb1.overlap_push(&aabb2);
-                    transform1.translation += overlap * 2.0;
-                    aabb1.update(transform1.translation)
+                    if let Some(mut position) = position1 {
+                        position.0 += overlap;
+                    }
                 }
             } else if collidable1.is_some() && movable2.is_some() {
                 println!("Collision detected between Collidable entity {:?} and Movable entity {:?}", entity1, entity2);
@@ -128,9 +135,10 @@ pub fn check_collisions(
                 if let Some(mut velocity) = velocity2 {
                     let normal = calculate_collision_normal(&aabb1, &aabb2);
                     velocity.0 = reflect_velocity(velocity.0, normal) * 0.9;
-                    let overlap = aabb2.overlap_push_in_direction(&aabb1, normal);
-                    transform2.translation += overlap;
-                    aabb2.update(transform2.translation)
+                    let overlap = aabb2.overlap_push(&aabb1);
+                    if let Some(mut position) = position2 {
+                        position.0 += overlap;
+                    }
                 }
             }
         }
