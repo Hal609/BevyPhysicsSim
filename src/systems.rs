@@ -14,15 +14,16 @@ pub fn setup(
         ..default()
     },
     Collidable,
+    Normal(Vec3::new(0.0, 1.0, 0.0)),
     AABB::new( Vec3::new(0.0, 0.0, 0.0),  Vec3::new(25.0, 0.01, 25.0))));
 
 
-    // Cube
+    // Ball
     let initial_position = Vec3::new(0.0, 3.5, 0.0);
     let half_extents = Vec3::new(0.5, 0.5, 0.5); // Assuming the cube is 1x1x1
 
     commands.spawn((PbrBundle {
-        mesh: meshes.add(Cuboid::default()),
+        mesh: meshes.add(Sphere::default()),
         material: materials.add(Color::RED),
         ..default()
     },
@@ -52,7 +53,7 @@ pub fn setup(
     });
 }
 
-pub fn apply_gravity(mut query: Query<(&mut Force), With<Movable>>) {
+pub fn apply_gravity(mut query: Query<&mut Force, With<Movable>>) {
     for mut force in query.iter_mut() {
         let gravity = Vec3::new(0.0, -9.8, 0.0);
         force.0 += gravity;
@@ -79,6 +80,16 @@ pub fn handle_input(
             force.0.y += 200.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
+    if keyboard_input.pressed(KeyCode::ArrowUp) {
+        for mut force in query.iter_mut() {
+            force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
+        }
+    }
+    if keyboard_input.pressed(KeyCode::ArrowDown) {
+        for mut force in query.iter_mut() {
+            force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
+        }
+    }
 }
 
 pub fn reset_force(
@@ -95,17 +106,18 @@ pub fn check_collisions(
         Entity, 
         &mut AABB, 
         Option<&Movable>, 
-        Option<&Collidable>, 
+        Option<&Collidable>,
         Option<&mut Force>,
         Option<&mut Velocity>, 
         Option<&mut Position>,
-        Option<&Mass>
+        Option<&Mass>,
+        Option<&Normal>,
     )>,
 ) {
     let mut combinations = query.iter_combinations_mut();
     while let Some([
-        (entity1, aabb1, movable1, collidable1, force1, velocity1, position1, mass1), 
-        (entity2, aabb2, movable2, collidable2, force2, velocity2, position2, mass2)
+        (entity1, aabb1, movable1, collidable1, force1, velocity1, position1, mass1, normal1), 
+        (entity2, aabb2, movable2, collidable2, force2, velocity2, position2, mass2, normal2)
     ]) = combinations.fetch_next() {
         if aabb1.intersects(&aabb2) {
             if movable1.is_some() && movable2.is_some() {
@@ -118,9 +130,10 @@ pub fn check_collisions(
                     if let Some(mut position) = position1 {
                         if let Some(mut force) = force1 {
                             if let Some(mass) = mass1 {
-                                let normal = calculate_collision_normal(&aabb1, &aabb2);
-                                force.0 = -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
-                                position.0 -= aabb1.overlap_push_in_direction(&aabb2, normal);
+                                if let Some(normal) = normal2 {
+                                    force.0 += -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
+                                    position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
+                                }
                             }
                         }
                     }
@@ -132,9 +145,10 @@ pub fn check_collisions(
                     if let Some(mut position) = position2 {
                         if let Some(mut force) = force2 {
                             if let Some(mass) = mass2 {
-                                let normal = calculate_collision_normal(&aabb1, &aabb2);
-                                force.0 = -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
-                                position.0 -= aabb2.overlap_push_in_direction(&aabb1, normal);
+                                if let Some(normal) = normal1 {
+                                    force.0 += -2.0 * mass.0 * velocity.0.dot(normal.0) * normal.0 * 1.0/time.delta_seconds() * 0.95;
+                                    position.0 += aabb2.overlap_push_in_direction(&aabb1, normal.0);
+                                }
                             }
                         }
                     }
