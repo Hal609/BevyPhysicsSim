@@ -115,4 +115,58 @@ impl AABB {
 
         translation_axis
     }
+
+    pub fn overlap_push_in_direction(&self, other: &AABB, direction: Vec3) -> Vec3 {
+        // Normalize the direction vector
+        let norm_direction = direction.normalize();
+
+        // Calculate the overlap on each axis
+        let x_overlap = if other.min.x < self.max.x && other.max.x > self.min.x {
+            if self.max.x - other.min.x < other.max.x - self.min.x {
+                self.max.x - other.min.x
+            } else {
+                other.max.x - self.min.x
+            }
+        } else {
+            0.0
+        };
+
+        let y_overlap = if other.min.y < self.max.y && other.max.y > self.min.y {
+            if self.max.y - other.min.y < other.max.y - self.min.y {
+                self.max.y - other.min.y
+            } else {
+                other.max.y - self.min.y
+            }
+        } else {
+            0.0
+        };
+
+        let z_overlap = if other.min.z < self.max.z && other.max.z > self.min.z {
+            if self.max.z - other.min.z < other.max.z - self.min.z {
+                self.max.z - other.min.z
+            } else {
+                other.max.z - self.min.z
+            }
+        } else {
+            0.0
+        };
+
+        // Project the overlaps onto the direction vector
+        let x_projection = x_overlap / norm_direction.x.abs();
+        let y_projection = y_overlap / norm_direction.y.abs();
+        let z_projection = z_overlap / norm_direction.z.abs();
+
+        // Find the minimum projection
+        let mut min_projection = x_projection;
+
+        if y_overlap != 0.0 && y_projection < min_projection {
+            min_projection = y_projection;
+        }
+
+        if z_overlap != 0.0 && z_projection < min_projection {
+            min_projection = z_projection;
+        }
+
+        return min_projection *  norm_direction;
+    }
 }

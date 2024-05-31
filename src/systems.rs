@@ -76,7 +76,6 @@ pub fn apply_motion( time: Res<Time>,
         velocity.0 += force.0 * mass.0 * time.delta_seconds();
         position.0 += velocity.0 * time.delta_seconds();
         transform.translation = position.0;
-
         aabb.update(position.0);
         // if position.0.y <= 0.5 {
         //     position.0.y = 0.5;
@@ -105,11 +104,11 @@ pub fn reset_force(
 }
 
 pub fn check_collisions(
-    mut query: Query<(Entity, &AABB, Option<&Movable>, Option<&Collidable>, Option<&mut Velocity>, &mut Transform)>,
+    mut query: Query<(Entity, &mut AABB, Option<&Movable>, Option<&Collidable>, Option<&mut Velocity>, &mut Transform)>,
 ) {
     let mut combinations = query.iter_combinations_mut();
-    while let Some([(entity1, aabb1, movable1, collidable1, velocity1, mut transform1), (entity2, aabb2, movable2, collidable2, velocity2, mut transform2)]) = combinations.fetch_next() {
-        if aabb1.intersects(aabb2) {
+    while let Some([(entity1, mut aabb1, movable1, collidable1, velocity1, mut transform1), (entity2, mut aabb2, movable2, collidable2, velocity2, mut transform2)]) = combinations.fetch_next() {
+        if aabb1.intersects(&aabb2) {
             if movable1.is_some() && movable2.is_some() {
                 println!("Collision detected between two Movable entities: {:?} and {:?}", entity1, entity2);
                 // Handle the response for two Movable objects
@@ -117,20 +116,21 @@ pub fn check_collisions(
                 println!("Collision detected between Movable entity {:?} and Collidable entity {:?}", entity1, entity2);
                 // Handle the response for Movable (entity1) and Collidable (entity2) objects
                 if let Some(mut velocity) = velocity1 {
-                    let normal = calculate_collision_normal(aabb1, aabb2);
+                    let normal = calculate_collision_normal(&aabb1, &aabb2);
                     velocity.0 = reflect_velocity(velocity.0, normal) * 0.9;
-                    let penetration_depth = aabb1.penetration_depth(aabb2);
-                    transform1.translation += normal * penetration_depth.length();
+                    let overlap = aabb1.overlap_push(&aabb2);
+                    transform1.translation += overlap * 2.0;
+                    aabb1.update(transform1.translation)
                 }
             } else if collidable1.is_some() && movable2.is_some() {
                 println!("Collision detected between Collidable entity {:?} and Movable entity {:?}", entity1, entity2);
                 // Handle the response for Collidable (entity1) and Movable (entity2) objects
                 if let Some(mut velocity) = velocity2 {
-                    let normal = calculate_collision_normal(aabb1, aabb2);
+                    let normal = calculate_collision_normal(&aabb1, &aabb2);
                     velocity.0 = reflect_velocity(velocity.0, normal) * 0.9;
-                    let overlap = aabb2.overlap_push(aabb1);
-                    transform2.translation += overlap * 2.0;
-                    aabb2.update(transform2.translation);
+                    let overlap = aabb2.overlap_push_in_direction(&aabb1, normal);
+                    transform2.translation += overlap;
+                    aabb2.update(transform2.translation)
                 }
             }
         }
