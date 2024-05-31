@@ -131,8 +131,8 @@ pub fn check_collisions(
                         if let Some(mut force) = force1 {
                             if let Some(mass) = mass1 {
                                 if let Some(normal) = normal2 {
-                                    force.0 += -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
-                                    position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
+                                    force.0 += -2.0 * mass.0 * velocity.0.length() * normal.0 * 1.0/time.delta_seconds() * 0.95;
+                                    position.0 += aabb1.overlap_push_in_direction(&aabb2, normal.0);
                                 }
                             }
                         }
