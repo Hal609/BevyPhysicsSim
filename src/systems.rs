@@ -60,6 +60,13 @@ pub fn apply_gravity(mut query: Query<&mut Force, With<Movable>>) {
     }
 }
 
+pub fn apply_friction(mut query: Query<(&mut Force, &Velocity), With<Movable>>) {
+    for (mut force, velocity) in query.iter_mut() {
+        let friction = -velocity.0;
+        force.0 += friction;
+    }
+}
+
 pub fn apply_motion( time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Position, &mut Velocity, &mut Force, &Mass, &mut AABB), With<Movable>>,
 ) {
@@ -82,10 +89,20 @@ pub fn handle_input(
     }
     if keyboard_input.pressed(KeyCode::ArrowUp) {
         for mut force in query.iter_mut() {
-            force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
+            force.0.z -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::ArrowDown) {
+        for mut force in query.iter_mut() {
+            force.0.z += 10.0; // Add a force to the cube to a positive value when space is pressed
+        }
+    }
+    if keyboard_input.pressed(KeyCode::ArrowRight) {
+        for mut force in query.iter_mut() {
+            force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
+        }
+    }
+    if keyboard_input.pressed(KeyCode::ArrowLeft) {
         for mut force in query.iter_mut() {
             force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }

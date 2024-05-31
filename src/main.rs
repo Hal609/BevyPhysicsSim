@@ -12,7 +12,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Update, (reset_force,
-             (apply_gravity, handle_input), check_collisions,
+             (apply_gravity, apply_friction, handle_input), check_collisions,
               apply_motion,
         ).chain())  
         .run();
