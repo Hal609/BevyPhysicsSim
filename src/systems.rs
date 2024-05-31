@@ -1,12 +1,5 @@
 
-use bevy::{
-    prelude::*,
-    render::{
-        render_asset::RenderAssetUsages,
-        render_resource::{Extent3d, TextureDimension, TextureFormat},
-    },
-};
-
+use bevy::prelude::*;
 use crate::components::*;
 
 pub fn setup(
@@ -59,11 +52,8 @@ pub fn setup(
     });
 }
 
-pub fn apply_gravity(
-    time: Res<Time>,
-    mut query: Query<(&mut Transform, &mut Position, &mut Velocity, &mut Force, &Mass), With<Movable>>,
-) {
-    for (mut transform, mut position, mut velocity, mut force, mass) in query.iter_mut() {
+pub fn apply_gravity(mut query: Query<(&mut Force), With<Movable>>) {
+    for mut force in query.iter_mut() {
         let gravity = Vec3::new(0.0, -9.8, 0.0);
         force.0 += gravity;
     }
@@ -114,8 +104,8 @@ pub fn check_collisions(
 ) {
     let mut combinations = query.iter_combinations_mut();
     while let Some([
-        (entity1, mut aabb1, movable1, collidable1, mut force1, velocity1, mut position1, mass1), 
-        (entity2, mut aabb2, movable2, collidable2, mut force2, velocity2, mut position2, mass2)
+        (entity1, aabb1, movable1, collidable1, force1, velocity1, position1, mass1), 
+        (entity2, aabb2, movable2, collidable2, force2, velocity2, position2, mass2)
     ]) = combinations.fetch_next() {
         if aabb1.intersects(&aabb2) {
             if movable1.is_some() && movable2.is_some() {
@@ -124,10 +114,10 @@ pub fn check_collisions(
             } else if movable1.is_some() && collidable2.is_some() {
                 println!("Collision detected between Movable entity {:?} and Collidable entity {:?}", entity1, entity2);
                 // Handle the response for Movable (entity1) and Collidable (entity2) objects
-                if let Some(mut velocity) = velocity1 {
+                if let Some(velocity) = velocity1 {
                     if let Some(mut position) = position1 {
                         if let Some(mut force) = force1 {
-                            if let Some(mut mass) = mass1 {
+                            if let Some(mass) = mass1 {
                                 let normal = calculate_collision_normal(&aabb1, &aabb2);
                                 force.0 = -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
                                 position.0 -= aabb1.overlap_push_in_direction(&aabb2, normal);
@@ -138,10 +128,10 @@ pub fn check_collisions(
             } else if collidable1.is_some() && movable2.is_some() {
                 println!("Collision detected between Collidable entity {:?} and Movable entity {:?}", entity1, entity2);
                 // Handle the response for Collidable (entity1) and Movable (entity2) objects
-                if let Some(mut velocity) = velocity2 {
+                if let Some(velocity) = velocity2 {
                     if let Some(mut position) = position2 {
                         if let Some(mut force) = force2 {
-                            if let Some(mut mass) = mass2 {
+                            if let Some(mass) = mass2 {
                                 let normal = calculate_collision_normal(&aabb1, &aabb2);
                                 force.0 = -2.0 * mass.0 * velocity.0.length() * normal * 1.0/time.delta_seconds() * 0.95;
                                 position.0 -= aabb2.overlap_push_in_direction(&aabb1, normal);
@@ -166,8 +156,4 @@ fn calculate_collision_normal(aabb1: &AABB, aabb2: &AABB) -> Vec3 {
     } else {
         Vec3::new(0.0, 0.0, difference.z.signum())
     }
-}
-
-fn reflect_velocity(velocity: Vec3, normal: Vec3) -> Vec3 {
-    velocity - 2.0 * velocity.dot(normal) * normal
 }
