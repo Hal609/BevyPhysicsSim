@@ -1,5 +1,16 @@
 use bevy::prelude::*;
 
+// Sphere component
+#[derive(Component)]
+pub struct Sphere {
+    pub position: Position,
+    pub radius: f32,
+    pub mass: Mass,
+    pub velocity: Velocity,
+    pub force: Force,
+    pub aabb: AABB,
+}
+
 // Marker component to identify the movable cube
 #[derive(Component)]
 pub struct Movable;
