@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 // Sphere component
 #[derive(Component)]
-pub struct Sphere {
+pub struct Sphere_Obj {
     pub position: Position,
     pub radius: f32,
     pub mass: Mass,
@@ -10,6 +10,9 @@ pub struct Sphere {
     pub force: Force,
     pub aabb: AABB,
 }
+
+#[derive(Component)]
+pub struct Controllable;
 
 // Marker component to identify the movable cube
 #[derive(Component)]

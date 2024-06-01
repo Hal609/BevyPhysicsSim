@@ -33,11 +33,31 @@ pub fn setup(
         ..default()
     },
         Movable,
+        Controllable,
         Position(initial_position),
         Velocity(Vec3::new(0.0, 0.0, 0.0)),
         Force(Vec3::new(0.0, 0.0, 0.0)),
         Mass(1.0),
         AABB::new(initial_position, half_extents)
+    ));
+
+    // Ball 2
+    commands.spawn((PbrBundle {
+        mesh: meshes.add(Sphere::default()),
+        material: materials.add(StandardMaterial {
+            base_color: Color::rgb(0.0, 0.0, 1.0),  // Red color
+            metallic: 0.0,  // Fully metallic
+            perceptual_roughness: 0.2,  // Low roughness for a shiny surface
+            ..Default::default()
+        }),
+        ..default()
+    },
+        Movable,
+        Position(Vec3::new(-3.0, 1.0, -2.0)),
+        Velocity(Vec3::new(0.0, 0.0, 0.0)),
+        Force(Vec3::new(0.0, 0.0, 0.0)),
+        Mass(1.0),
+        AABB::new(Vec3::new(-3.0, 1.0, -2.0), half_extents)
     ));
     
 
@@ -85,7 +105,7 @@ pub fn apply_motion( time: Res<Time>,
 
 pub fn handle_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Force, With<Movable>>,
+    mut query: Query<&mut Force, With<Controllable>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for mut force in query.iter_mut() {
@@ -144,30 +164,52 @@ pub fn check_collisions(
     ]) = combinations.fetch_next() {
         
         if aabb1.intersects(&aabb2) {
-            match (movable1.is_some(), collidable1.is_some(), movable2.is_some(), collidable2.is_some()) {
-                (true, _, true, _) => {
-                    println!("Collision detected between two Movable entities: {:?} and {:?}", entity1, entity2);
-                    // Handle the response for two Movable objects
-                },
-                (true, _, _, true) => {
-                    println!("Collision detected between Movable entity {:?} and Collidable entity {:?}", entity1, entity2);
-                    handle_static_collision_response(
-                        &time, &aabb1, &aabb2, 
-                        velocity1, position1, force1, mass1, normal2
-                    );
-                },
-                (_, true, true, _) => {
-                    println!("Collision detected between Collidable entity {:?} and Movable entity {:?}", entity1, entity2);
-                    handle_static_collision_response(
-                        &time, &aabb2, &aabb1, 
-                        velocity2, position2, force2, mass2, normal1
-                    );
-                },
-                _ => {},
+            if movable1.is_some() && movable2.is_some() {
+                println!("Collision detected between two Movable entities: {:?} and {:?}", entity1, entity2);
+                handle_movable_collision_response(
+                    &time, &aabb1, &aabb2,
+                    velocity1, force1, mass1,
+                    velocity2, force2, mass2,
+                );
+            } else if movable1.is_some() && collidable2.is_some() {
+                handle_static_collision_response(
+                    &time, &aabb1, &aabb2, 
+                    velocity1, position1, force1, mass1, normal2
+                );
+            } else if collidable1.is_some() && movable2.is_some() {
+                handle_static_collision_response(
+                    &time, &aabb2, &aabb1, 
+                    velocity2, position2, force2, mass2, normal1
+                );
             }
         }
     }
 }
+
+fn handle_movable_collision_response(
+    time: &Res<Time>,
+    aabb1: &AABB,
+    aabb2: &AABB,
+    velocity1: Option<Mut<Velocity>>,
+    mut force1: Option<Mut<Force>>,
+    mass1: Option<&Mass>,
+    velocity2: Option<Mut<Velocity>>,
+    mut force2: Option<Mut<Force>>,
+    mass2: Option<&Mass>
+) {
+    if let (Some(velocity1), Some(mut force1), Some(mass1),
+            Some(velocity2), Some(mut force2), Some(mass2)) =
+        (velocity1, force1, mass1, velocity2, force2, mass2) {
+
+        let normal = calculate_collision_normal(&aabb1, &aabb2);
+        let vel_in_normal = (velocity2.0 - velocity1.0).dot(normal);
+        let impulse = -2.0 * vel_in_normal / ((1.0 / mass1.0) + (1.0 / mass2.0)) * normal;
+        
+        force1.0 -= impulse / time.delta_seconds();
+        force2.0 += impulse / time.delta_seconds();
+    }
+}
+
 
 fn handle_static_collision_response(
     time: &Res<Time>,
