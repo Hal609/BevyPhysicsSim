@@ -165,9 +165,8 @@ pub fn check_collisions(
         
         if aabb1.intersects(&aabb2) {
             if movable1.is_some() && movable2.is_some() {
-                println!("Collision detected between two Movable entities: {:?} and {:?}", entity1, entity2);
                 handle_movable_collision_response(
-                    &time, &aabb1, &aabb2,
+                    &time, &aabb1, &aabb2, position1,
                     velocity1, force1, mass1,
                     velocity2, force2, mass2,
                 );
@@ -190,6 +189,7 @@ fn handle_movable_collision_response(
     time: &Res<Time>,
     aabb1: &AABB,
     aabb2: &AABB,
+    mut position1: Option<Mut<Position>>,
     velocity1: Option<Mut<Velocity>>,
     mut force1: Option<Mut<Force>>,
     mass1: Option<&Mass>,
@@ -197,16 +197,18 @@ fn handle_movable_collision_response(
     mut force2: Option<Mut<Force>>,
     mass2: Option<&Mass>
 ) {
-    if let (Some(velocity1), Some(mut force1), Some(mass1),
+    if let (Some(mut position1), Some(velocity1), Some(mut force1), Some(mass1),
             Some(velocity2), Some(mut force2), Some(mass2)) =
-        (velocity1, force1, mass1, velocity2, force2, mass2) {
+        (position1, velocity1, force1, mass1, velocity2, force2, mass2) {
 
         let normal = calculate_collision_normal(&aabb1, &aabb2);
         let vel_in_normal = (velocity2.0 - velocity1.0).dot(normal);
-        let impulse = -2.0 * vel_in_normal / ((1.0 / mass1.0) + (1.0 / mass2.0)) * normal;
+        let impulse = normal * -2.0 * vel_in_normal / ((1.0 / mass1.0) + (1.0 / mass2.0));
         
         force1.0 -= impulse / time.delta_seconds();
         force2.0 += impulse / time.delta_seconds();
+
+        position1.0 += aabb1.overlap_push_in_direction(aabb2, normal);
     }
 }
 
