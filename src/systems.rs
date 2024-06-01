@@ -85,26 +85,6 @@ pub fn setup(
         AABB::new(initial_position, half_extents)
     ));
 
-    // Ball 2
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(Sphere::default()),
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(0.0, 0.0, 1.0),  // Red color
-            metallic: 0.0,  // Fully metallic
-            perceptual_roughness: 0.2,  // Low roughness for a shiny surface
-            ..Default::default()
-        }),
-        ..default()
-    },
-        Movable,
-        Position(Vec3::new(-3.0, 1.0, -2.0)),
-        Velocity(Vec3::new(0.0, 0.0, 0.0)),
-        Force(Vec3::new(0.0, 0.0, 0.0)),
-        Mass(1.0),
-        AABB::new(Vec3::new(-3.0, 1.0, -2.0), half_extents)
-    ));
-    
-
     // Light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -113,6 +93,21 @@ pub fn setup(
         },
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
+    });
+
+     // Directional light (sun)
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            shadows_enabled: true,
+            illuminance: 1000.0,
+            ..Default::default()
+        },
+        transform: Transform {
+            translation: Vec3::new(0.0, 10.0, 0.0),
+            rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
+            ..Default::default()
+        },
+        ..Default::default()
     });
 
     // Camera
