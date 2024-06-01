@@ -1,6 +1,50 @@
 
 use bevy::prelude::*;
-use crate::components::*;
+use rand::prelude::*;
+use crate::{components::*, SphereSpawnTimer};
+
+pub fn spawn_sphere(
+    time: Res<Time>,
+    mut timer: ResMut<SphereSpawnTimer>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Update the timer
+    if timer.timer.tick(time.delta()).just_finished() {
+        // Random position for the sphere
+        let mut rng = rand::thread_rng();
+        let x: f32 = rng.gen_range(-10.0..10.0);
+        let y: f32 = rng.gen_range(1.0..5.0);
+        let z: f32 = rng.gen_range(-10.0..10.0);
+        let position = Vec3::new(x, y, z);
+
+        // Spawn the sphere
+        let half_extents = Vec3::new(0.25, 0.25, 0.25); // Assuming the sphere's bounding box
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(Sphere {
+                    radius: 0.25
+                }),
+                material: materials.add(StandardMaterial {
+                    base_color: Color::rgb(rng.gen(), rng.gen(), rng.gen()),  // Random color
+                    metallic: 0.0,
+                    perceptual_roughness: 0.2,
+                    ..Default::default()
+                }),
+                transform: Transform::from_translation(position),
+                ..Default::default()
+            },
+            Movable,
+            Position(position),
+            Velocity(Vec3::new(0.0, 0.0, 0.0)),
+            Force(Vec3::new(0.0, 0.0, 0.0)),
+            Mass(0.25),
+            AABB::new(position, half_extents)
+        ));
+    }
+}
+
 
 pub fn setup(
     mut commands: Commands,
@@ -78,10 +122,10 @@ pub fn setup(
     });
 }
 
-pub fn apply_gravity(mut query: Query<&mut Force, With<Movable>>) {
-    for mut force in query.iter_mut() {
+pub fn apply_gravity(mut query: Query<(&mut Force, &Mass), With<Movable>>) {
+    for (mut force, mass) in query.iter_mut() {
         let gravity = Vec3::new(0.0, -9.8, 0.0);
-        force.0 += gravity;
+        force.0 += gravity * mass.0;
     }
 }
 
@@ -96,7 +140,7 @@ pub fn apply_motion( time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Position, &mut Velocity, &mut Force, &Mass, &mut AABB), With<Movable>>,
 ) {
     for (mut transform, mut position, mut velocity, force, mass, mut aabb) in query.iter_mut() {
-        velocity.0 += force.0 * mass.0 * time.delta_seconds();
+        velocity.0 += (force.0 / mass.0) * time.delta_seconds();
         position.0 += velocity.0 * time.delta_seconds();
         transform.translation = position.0;
         aabb.update(position.0);

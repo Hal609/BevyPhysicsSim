@@ -1,14 +1,19 @@
 use bevy::prelude::*;
 
-// Sphere component
-#[derive(Component)]
-pub struct Sphere_Obj {
-    pub position: Position,
-    pub radius: f32,
-    pub mass: Mass,
-    pub velocity: Velocity,
-    pub force: Force,
-    pub aabb: AABB,
+// // Sphere component
+// #[derive(Component)]
+// pub struct Sphere_Obj {
+//     pub position: Position,
+//     pub radius: f32,
+//     pub mass: Mass,
+//     pub velocity: Velocity,
+//     pub force: Force,
+//     pub aabb: AABB,
+// }
+
+#[derive(Resource)]
+pub struct SphereSpawnTimer {
+    pub timer: Timer,
 }
 
 #[derive(Component)]
