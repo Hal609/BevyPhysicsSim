@@ -63,13 +63,13 @@ fn spawn_ground_plane(
 ) {
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Plane3d::default().mesh().size(50.0, 50.0)),
+            mesh: meshes.add(Plane3d::default().mesh().size(25.0, 25.0)),
             material: materials.add(Color::WHITE),
             ..default()
         },
         StaticCollision {
             normal: Normal(Vec3::new(0.0, 1.0, 0.0)),
-            aabb: AABB::new(Vec3::new(0.0, -1.0, 0.0), Vec3::new(25.0, 1.0, 25.0)),
+            aabb: AABB::new(Vec3::new(0.0, -1.0, 0.0), Vec3::new(12.26, 1.0, 12.26)),
         },
     ));
 }
@@ -81,7 +81,7 @@ fn spawn_vertical_plane(
 ) {
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Plane3d::default().mesh().size(25.0, 25.0)),
+            mesh: meshes.add(Plane3d::default().mesh().size(25.0, 5.0)),
             material: materials.add(StandardMaterial {
                 base_color: Color::WHITE,
                 ..Default::default()
@@ -158,7 +158,7 @@ fn spawn_lights(commands: &mut Commands) {
 
 fn spawn_camera(commands: &mut Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-8.5, 8.5, 19.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 8.5, 19.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
     });
 }
@@ -173,7 +173,7 @@ pub fn apply_gravity(mut query: Query<&mut PhysicsSphere>) {
 
 pub fn apply_friction(mut query: Query<&mut PhysicsSphere>) {
     for mut physics_sphere in query.iter_mut() {
-        let friction = -physics_sphere.velocity.0;
+        let friction = -physics_sphere.velocity.0 * 0.5;
         physics_sphere.force.0 += friction;
     }
 }
@@ -204,22 +204,22 @@ pub fn handle_input(
             physics_sphere.force.0.y += 200.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
-    if keyboard_input.pressed(KeyCode::ArrowUp) {
+    if keyboard_input.pressed(KeyCode::KeyW) {
         for mut physics_sphere in query.iter_mut() {
             physics_sphere.force.0.z -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
-    if keyboard_input.pressed(KeyCode::ArrowDown) {
+    if keyboard_input.pressed(KeyCode::KeyS) {
         for mut physics_sphere in query.iter_mut() {
             physics_sphere.force.0.z += 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
-    if keyboard_input.pressed(KeyCode::ArrowRight) {
+    if keyboard_input.pressed(KeyCode::KeyD) {
         for mut physics_sphere in query.iter_mut() {
             physics_sphere.force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
-    if keyboard_input.pressed(KeyCode::ArrowLeft) {
+    if keyboard_input.pressed(KeyCode::KeyA) {
         for mut physics_sphere in query.iter_mut() {
             physics_sphere.force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }
@@ -242,7 +242,7 @@ pub fn check_static_collisions(
                 let vel = physics_sphere.velocity.0;
 
                 physics_sphere.force.0 +=
-                    -2.0 * mass * vel.dot(normal) * normal * 1.0 / time.delta_seconds();
+                    -2.0 * mass * vel.dot(normal) * normal * 1.0 / time.delta_seconds() * 0.90;
                 physics_sphere.position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
             }
         }

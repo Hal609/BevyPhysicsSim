@@ -18,7 +18,7 @@ fn main() {
             Update,
             (
                 (apply_gravity, apply_friction, handle_input, spawn_sphere),
-                (check_static_collisions, handle_movable_collision),
+                (handle_movable_collision, check_static_collisions).chain(),
                 apply_motion,
             )
                 .chain(),
