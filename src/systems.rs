@@ -1,7 +1,6 @@
-
+use crate::{components::*, SphereSpawnTimer};
 use bevy::prelude::*;
 use rand::prelude::*;
-use crate::{components::*, SphereSpawnTimer};
 
 pub fn spawn_sphere(
     time: Res<Time>,
@@ -23,11 +22,9 @@ pub fn spawn_sphere(
         let half_extents = Vec3::new(0.25, 0.25, 0.25); // Assuming the sphere's bounding box
         commands.spawn((
             PbrBundle {
-                mesh: meshes.add(Sphere {
-                    radius: 0.25
-                }),
+                mesh: meshes.add(Sphere { radius: 0.25 }),
                 material: materials.add(StandardMaterial {
-                    base_color: Color::rgb(rng.gen(), rng.gen(), rng.gen()),  // Random color
+                    base_color: Color::rgb(rng.gen(), rng.gen(), rng.gen()), // Random color
                     metallic: 0.0,
                     perceptual_roughness: 0.2,
                     ..Default::default()
@@ -35,16 +32,17 @@ pub fn spawn_sphere(
                 transform: Transform::from_translation(position),
                 ..Default::default()
             },
-            Movable,
-            Position(position),
-            Velocity(Vec3::new(0.0, 0.0, 0.0)),
-            Force(Vec3::new(0.0, 0.0, 0.0)),
-            Mass(0.25),
-            AABB::new(position, half_extents)
+            PhysicsSphere {
+                position: Position(position),
+                radius: 0.25,
+                mass: Mass(0.25),
+                velocity: Velocity(Vec3::ZERO),
+                force: Force(Vec3::ZERO),
+                aabb: AABB::new(position, half_extents),
+            },
         ));
     }
 }
-
 
 pub fn setup(
     mut commands: Commands,
@@ -52,37 +50,63 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // ground plane
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(Plane3d::default().mesh().size(50.0, 50.0)),
-        material: materials.add(Color::WHITE),
-        ..default()
-    },
-    Collidable,
-    Normal(Vec3::new(0.0, 1.0, 0.0)),
-    AABB::new( Vec3::new(0.0, 0.0, 0.0),  Vec3::new(25.0, 0.01, 25.0))));
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Plane3d::default().mesh().size(25.0, 25.0)),
+            material: materials.add(Color::WHITE),
+            ..default()
+        },
+        StaticCollision {
+            normal: Normal(Vec3::new(0.0, 1.0, 0.0)),
+            aabb: AABB::new(Vec3::new(0.0, -1.0, 0.0), Vec3::new(25.0, 1.0, 25.0)),
+        },
+    ));
 
+    // Vertical plane (wall)
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Plane3d::default().mesh().size(25.0, 5.0)),
+            material: materials.add(StandardMaterial {
+                base_color: Color::WHITE,
+                ..Default::default()
+            }),
+            transform: Transform {
+                translation: Vec3::new(0.0, 0.0, -12.5), // Position the wall as needed
+                rotation: Quat::from_rotation_x(std::f32::consts::FRAC_PI_2), // Rotate to vertical
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        StaticCollision {
+            normal: Normal(Vec3::new(0.0, 0.0, 1.0)), // Normal facing along the z-axis
+            aabb: AABB::new(Vec3::new(0.0, 12.5, -12.5), Vec3::new(25.0, 25.0, 0.01)),
+        },
+    ));
 
     // Ball
     let initial_position = Vec3::new(0.0, 3.5, 0.0);
-    let half_extents = Vec3::new(0.5, 0.5, 0.5); // Assuming the cube is 1x1x1
+    let half_extents = Vec3::new(0.5, 0.5, 0.5); // Assuming the ball is 1x1x1
 
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(Sphere::default()),
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(1.0, 0.0, 0.0),  // Red color
-            metallic: 0.0,  // Fully metallic
-            perceptual_roughness: 0.2,  // Low roughness for a shiny surface
-            ..Default::default()
-        }),
-        ..default()
-    },
-        Movable,
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(Sphere::default()),
+            material: materials.add(StandardMaterial {
+                base_color: Color::rgb(1.0, 0.0, 0.0), // Red color
+                metallic: 0.0,                         // Fully metallic
+                perceptual_roughness: 0.2,             // Low roughness for a shiny surface
+                ..Default::default()
+            }),
+            ..default()
+        },
+        PhysicsSphere {
+            position: Position(initial_position),
+            radius: 1.0,
+            mass: Mass(1.0),
+            velocity: Velocity(Vec3::ZERO),
+            force: Force(Vec3::ZERO),
+            aabb: AABB::new(initial_position, half_extents),
+        },
         Controllable,
-        Position(initial_position),
-        Velocity(Vec3::new(0.0, 0.0, 0.0)),
-        Force(Vec3::new(0.0, 0.0, 0.0)),
-        Mass(1.0),
-        AABB::new(initial_position, half_extents)
     ));
 
     // Light
@@ -95,7 +119,7 @@ pub fn setup(
         ..default()
     });
 
-     // Directional light (sun)
+    // Directional light (sun)
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             shadows_enabled: true,
@@ -112,113 +136,90 @@ pub fn setup(
 
     // Camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(-8.5, 8.5, 19.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
 
-pub fn apply_gravity(mut query: Query<(&mut Force, &Mass), With<Movable>>) {
-    for (mut force, mass) in query.iter_mut() {
+pub fn apply_gravity(mut query: Query<&mut PhysicsSphere>) {
+    for mut physics_sphere in query.iter_mut() {
         let gravity = Vec3::new(0.0, -9.8, 0.0);
-        force.0 += gravity * mass.0;
+        let mass = physics_sphere.mass.0;
+        physics_sphere.force.0 += gravity * mass;
     }
 }
 
-pub fn apply_friction(mut query: Query<(&mut Force, &Velocity), With<Movable>>) {
-    for (mut force, velocity) in query.iter_mut() {
-        let friction = -velocity.0;
-        force.0 += friction;
+pub fn apply_friction(mut query: Query<&mut PhysicsSphere>) {
+    for mut physics_sphere in query.iter_mut() {
+        let friction = -physics_sphere.velocity.0;
+        physics_sphere.force.0 += friction;
     }
 }
 
-pub fn apply_motion( time: Res<Time>,
-    mut query: Query<(&mut Transform, &mut Position, &mut Velocity, &mut Force, &Mass, &mut AABB), With<Movable>>,
-) {
-    for (mut transform, mut position, mut velocity, force, mass, mut aabb) in query.iter_mut() {
-        velocity.0 += (force.0 / mass.0) * time.delta_seconds();
-        position.0 += velocity.0 * time.delta_seconds();
-        transform.translation = position.0;
-        aabb.update(position.0);
+pub fn apply_motion(time: Res<Time>, mut query: Query<(&mut Transform, &mut PhysicsSphere)>) {
+    for (mut transform, mut physics_sphere) in query.iter_mut() {
+        let vel = physics_sphere.velocity.0;
+        let mass = physics_sphere.mass.0;
+        let force = physics_sphere.force.0;
+        let pos = physics_sphere.position.0;
+
+        physics_sphere.velocity.0 += (force / mass) * time.delta_seconds();
+        physics_sphere.position.0 += vel * time.delta_seconds();
+        transform.translation = physics_sphere.position.0;
+        physics_sphere.aabb.update(pos);
+
+        physics_sphere.force.0 = Vec3::ZERO;
     }
 }
 
 pub fn handle_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Force, With<Controllable>>,
+    mut query: Query<&mut PhysicsSphere, With<Controllable>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        for mut force in query.iter_mut() {
-            force.0.y += 200.0; // Add a force to the cube to a positive value when space is pressed
+        for mut physics_sphere in query.iter_mut() {
+            physics_sphere.force.0.y += 200.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::ArrowUp) {
-        for mut force in query.iter_mut() {
-            force.0.z -= 10.0; // Add a force to the cube to a positive value when space is pressed
+        for mut physics_sphere in query.iter_mut() {
+            physics_sphere.force.0.z -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::ArrowDown) {
-        for mut force in query.iter_mut() {
-            force.0.z += 10.0; // Add a force to the cube to a positive value when space is pressed
+        for mut physics_sphere in query.iter_mut() {
+            physics_sphere.force.0.z += 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::ArrowRight) {
-        for mut force in query.iter_mut() {
-            force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
+        for mut physics_sphere in query.iter_mut() {
+            physics_sphere.force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::ArrowLeft) {
-        for mut force in query.iter_mut() {
-            force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
+        for mut physics_sphere in query.iter_mut() {
+            physics_sphere.force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
         }
-    }
-}
-
-pub fn reset_force(
-    mut query: Query<&mut Force, With<Movable>>,
-) {
-    for mut force in query.iter_mut() {
-        force.0 = Vec3::new(0.0, 0.0, 0.0);
     }
 }
 
 pub fn check_collisions(
     time: Res<Time>,
-    mut query: Query<(
-        Entity, 
-        &mut AABB, 
-        Option<&Movable>, 
-        Option<&Collidable>,
-        Option<&mut Force>,
-        Option<&mut Velocity>, 
-        Option<&mut Position>,
-        Option<&Mass>,
-        Option<&Normal>,
-    )>,
+    mut query: Query<(Option<&mut PhysicsSphere>, Option<&mut StaticCollision>)>,
 ) {
     let mut combinations = query.iter_combinations_mut();
-    
-    while let Some([
-        (entity1, aabb1, movable1, collidable1, force1, velocity1, position1, mass1, normal1), 
-        (entity2, aabb2, movable2, collidable2, force2, velocity2, position2, mass2, normal2)
-    ]) = combinations.fetch_next() {
-        
-        if aabb1.intersects(&aabb2) {
-            if movable1.is_some() && movable2.is_some() {
-                handle_movable_collision_response(
-                    &time, &aabb1, &aabb2, position1,
-                    velocity1, force1, mass1,
-                    velocity2, force2, mass2,
-                );
-            } else if movable1.is_some() && collidable2.is_some() {
-                handle_static_collision_response(
-                    &time, &aabb1, &aabb2, 
-                    velocity1, position1, force1, mass1, normal2
-                );
-            } else if collidable1.is_some() && movable2.is_some() {
-                handle_static_collision_response(
-                    &time, &aabb2, &aabb1, 
-                    velocity2, position2, force2, mass2, normal1
-                );
+
+    while let Some([(physics_sphere1, static_collision1), (physics_sphere2, static_collision2)]) =
+        combinations.fetch_next()
+    {
+        // if aabb1.intersects(&aabb2) {
+        if 1 == 2 {
+            if physics_sphere1.is_some() && physics_sphere2.is_some() {
+                handle_movable_collision_response(&time, physics_sphere1, physics_sphere2);
+            } else if physics_sphere1.is_some() && static_collision2.is_some() {
+                handle_static_collision_response(&time, physics_sphere1, static_collision2);
+            } else if static_collision1.is_some() && physics_sphere2.is_some() {
+                handle_static_collision_response(&time, physics_sphere2, static_collision1);
             }
         }
     }
@@ -226,48 +227,50 @@ pub fn check_collisions(
 
 fn handle_movable_collision_response(
     time: &Res<Time>,
-    aabb1: &AABB,
-    aabb2: &AABB,
-    mut position1: Option<Mut<Position>>,
-    velocity1: Option<Mut<Velocity>>,
-    mut force1: Option<Mut<Force>>,
-    mass1: Option<&Mass>,
-    velocity2: Option<Mut<Velocity>>,
-    mut force2: Option<Mut<Force>>,
-    mass2: Option<&Mass>
+    passed_physics_sphere1: Option<Mut<PhysicsSphere>>,
+    passed_physics_sphere2: Option<Mut<PhysicsSphere>>,
 ) {
-    if let (Some(mut position1), Some(velocity1), Some(mut force1), Some(mass1),
-            Some(velocity2), Some(mut force2), Some(mass2)) =
-        (position1, velocity1, force1, mass1, velocity2, force2, mass2) {
+    if let (Some(mut physics_sphere1), Some(mut physics_sphere2)) =
+        (passed_physics_sphere1, passed_physics_sphere2)
+    {
+        let aabb1 = physics_sphere1.aabb;
+        let aabb2 = physics_sphere2.aabb;
 
-        let normal = calculate_collision_normal(&aabb1, &aabb2);
-        let vel_in_normal = (velocity2.0 - velocity1.0).dot(normal);
-        let impulse = normal * -2.0 * vel_in_normal / ((1.0 / mass1.0) + (1.0 / mass2.0));
-        
-        force1.0 -= impulse / time.delta_seconds();
-        force2.0 += impulse / time.delta_seconds();
+        let v1 = physics_sphere1.velocity.0;
+        let v2 = physics_sphere2.velocity.0;
+        let m1 = physics_sphere1.mass.0;
+        let m2 = physics_sphere2.mass.0;
 
-        position1.0 += aabb1.overlap_push_in_direction(aabb2, normal);
+        let normal = calculate_collision_normal(&physics_sphere1.aabb, &physics_sphere2.aabb);
+        let vel_in_normal = (v2 - v1).dot(normal);
+        let impulse = normal * -2.0 * vel_in_normal / ((1.0 / m1) + (1.0 / m2));
+
+        physics_sphere1.force.0 -= impulse / time.delta_seconds();
+        physics_sphere2.force.0 += impulse / time.delta_seconds();
+
+        physics_sphere1.position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
     }
 }
-
 
 fn handle_static_collision_response(
     time: &Res<Time>,
-    aabb1: &AABB,
-    aabb2: &AABB,
-    velocity: Option<Mut<Velocity>>,
-    mut position: Option<Mut<Position>>,
-    mut force: Option<Mut<Force>>,
-    mass: Option<&Mass>,
-    normal: Option<&Normal>,
+    passed_physics_sphere: Option<Mut<PhysicsSphere>>,
+    passed_static_collision: Option<Mut<StaticCollision>>,
 ) {
-    if let (Some(mut velocity), Some(mut position), Some(mut force), Some(mass), Some(normal)) = (velocity, position, force, mass, normal) {
-        force.0 += -2.0 * mass.0 * velocity.0.dot(normal.0) * normal.0 * 1.0 / time.delta_seconds() * 0.95;
-        position.0 += aabb1.overlap_push_in_direction(aabb2, normal.0);
+    if let (Some(mut physics_sphere), Some(static_collision)) =
+        (passed_physics_sphere, passed_static_collision)
+    {
+        let aabb1 = physics_sphere.aabb;
+        let aabb2 = static_collision.aabb;
+
+        let normal = static_collision.normal.0;
+        let mass = physics_sphere.mass.0;
+        let vel = physics_sphere.velocity.0;
+        physics_sphere.force.0 +=
+            -2.0 * mass * vel.dot(normal) * normal * 1.0 / time.delta_seconds() * 0.95;
+        physics_sphere.position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
     }
 }
-
 
 fn calculate_collision_normal(aabb1: &AABB, aabb2: &AABB) -> Vec3 {
     let center1 = (aabb1.min + aabb1.max) * 0.5;

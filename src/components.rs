@@ -1,15 +1,21 @@
 use bevy::prelude::*;
 
-// // Sphere component
-// #[derive(Component)]
-// pub struct Sphere_Obj {
-//     pub position: Position,
-//     pub radius: f32,
-//     pub mass: Mass,
-//     pub velocity: Velocity,
-//     pub force: Force,
-//     pub aabb: AABB,
-// }
+// PhysicsSphere component
+#[derive(Component)]
+pub struct PhysicsSphere {
+    pub position: Position,
+    pub radius: f32,
+    pub mass: Mass,
+    pub velocity: Velocity,
+    pub force: Force,
+    pub aabb: AABB,
+}
+
+#[derive(Component)]
+pub struct StaticCollision {
+    pub normal: Normal,
+    pub aabb: AABB,
+}
 
 #[derive(Resource)]
 pub struct SphereSpawnTimer {
@@ -18,14 +24,6 @@ pub struct SphereSpawnTimer {
 
 #[derive(Component)]
 pub struct Controllable;
-
-// Marker component to identify the movable cube
-#[derive(Component)]
-pub struct Movable;
-
-// Marker component to identify collidable objects
-#[derive(Component)]
-pub struct Collidable;
 
 // Position component
 #[derive(Component)]
@@ -48,7 +46,7 @@ pub struct Force(pub Vec3);
 pub struct Mass(pub f32);
 
 // AABB component
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct AABB {
     pub min: Vec3,
     pub max: Vec3,
@@ -70,9 +68,12 @@ impl AABB {
     }
 
     pub fn intersects(&self, other: &AABB) -> bool {
-        self.min.x <= other.max.x && self.max.x >= other.min.x &&
-        self.min.y <= other.max.y && self.max.y >= other.min.y &&
-        self.min.z <= other.max.z && self.max.z >= other.min.z
+        self.min.x <= other.max.x
+            && self.max.x >= other.min.x
+            && self.min.y <= other.max.y
+            && self.max.y >= other.min.y
+            && self.min.z <= other.max.z
+            && self.max.z >= other.min.z
     }
 
     pub fn overlap_push_in_direction(&self, other: &AABB, direction: Vec3) -> Vec3 {
