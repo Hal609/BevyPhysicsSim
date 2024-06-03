@@ -46,7 +46,7 @@ pub struct Force(pub Vec3);
 pub struct Mass(pub f32);
 
 // AABB component
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct AABB {
     pub min: Vec3,
     pub max: Vec3,
