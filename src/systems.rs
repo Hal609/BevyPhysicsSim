@@ -106,7 +106,7 @@ fn spawn_ball(
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
     let initial_position = Vec3::new(0.0, 3.5, 0.0);
-    let half_extents = Vec3::new(0.5, 0.5, 0.5); // Assuming the cube is 1x1x1
+    let half_extents = Vec3::new(0.5, 0.5, 0.5); // Assuming the sphere is 1x1x1
 
     commands.spawn((
         PbrBundle {
@@ -121,7 +121,7 @@ fn spawn_ball(
         },
         PhysicsSphere {
             position: Position(initial_position),
-            radius: 1.0,
+            radius: 0.5,
             mass: Mass(1.0),
             velocity: Velocity(Vec3::ZERO),
             force: Force(Vec3::ZERO),
@@ -179,18 +179,19 @@ pub fn apply_friction(mut query: Query<&mut PhysicsSphere>) {
 }
 
 pub fn apply_motion(time: Res<Time>, mut query: Query<(&mut Transform, &mut PhysicsSphere)>) {
-    for (mut transform, mut physics_sphere) in query.iter_mut() {
-        let vel = physics_sphere.velocity.0;
-        let mass = physics_sphere.mass.0;
-        let force = physics_sphere.force.0;
-        let pos = physics_sphere.position.0;
+    for (mut transform, mut sphere) in query.iter_mut() {
+        let mass = sphere.mass.0;
+        let force = sphere.force.0;
+        sphere.velocity.0 += (force / mass) * time.delta_seconds();
 
-        physics_sphere.velocity.0 += (force / mass) * time.delta_seconds();
-        physics_sphere.position.0 += vel * time.delta_seconds();
-        transform.translation = physics_sphere.position.0;
-        physics_sphere.aabb.update(pos);
+        let vel = sphere.velocity.0;
+        sphere.position.0 += vel * time.delta_seconds();
 
-        physics_sphere.force.0 = Vec3::ZERO;
+        transform.translation = sphere.position.0;
+        let pos = sphere.position.0;
+        sphere.aabb.update(pos);
+
+        sphere.force.0 = Vec3::ZERO;
     }
 }
 
@@ -225,7 +226,7 @@ pub fn handle_input(
     }
 }
 
-pub fn check_collisions(
+pub fn check_static_collisions(
     time: Res<Time>,
     mut physics_query: Query<&mut PhysicsSphere>,
     static_query: Query<&StaticCollision>,
@@ -233,16 +234,15 @@ pub fn check_collisions(
     for mut physics_sphere in physics_query.iter_mut() {
         for static_collision in static_query.iter() {
             if physics_sphere.aabb.intersects(&static_collision.aabb) {
-                println!("Collision detected!");
-
                 let aabb1 = physics_sphere.aabb;
                 let aabb2 = static_collision.aabb;
 
                 let normal = static_collision.normal.0;
                 let mass = physics_sphere.mass.0;
                 let vel = physics_sphere.velocity.0;
+
                 physics_sphere.force.0 +=
-                    -2.0 * mass * vel.dot(normal) * normal * 1.0 / time.delta_seconds() * 0.95;
+                    -2.0 * mass * vel.dot(normal) * normal * 1.0 / time.delta_seconds();
                 physics_sphere.position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
             }
         }
@@ -254,22 +254,26 @@ pub fn handle_movable_collision(time: Res<Time>, mut query: Query<&mut PhysicsSp
 
     while let Some([mut sphere1, mut sphere2]) = combinations.fetch_next() {
         if sphere1.aabb.intersects(&sphere2.aabb) {
-            let aabb1 = sphere1.aabb;
-            let aabb2 = sphere2.aabb;
+            if sphere1.radius + sphere2.radius >= (sphere1.position.0 - sphere2.position.0).length()
+            {
+                let len_dif = sphere1.radius + sphere2.radius
+                    - (sphere1.position.0 - sphere2.position.0).length();
+                let separation_dir = (sphere1.position.0 - sphere2.position.0).normalize();
 
-            let v1 = sphere1.velocity.0;
-            let v2 = sphere2.velocity.0;
-            let m1 = sphere1.mass.0;
-            let m2 = sphere2.mass.0;
+                let v1 = sphere1.velocity.0;
+                let v2 = sphere2.velocity.0;
+                let m1 = sphere1.mass.0;
+                let m2 = sphere2.mass.0;
 
-            let normal = calculate_collision_normal(&sphere1.aabb, &sphere2.aabb);
-            let vel_in_normal = (v2 - v1).dot(normal);
-            let impulse = normal * -2.0 * vel_in_normal / ((1.0 / m1) + (1.0 / m2));
+                // let normal = calculate_collision_normal(&sphere1.aabb, &sphere2.aabb);
+                let vel_in_normal = (v2 - v1).dot(separation_dir);
+                let impulse = separation_dir * -2.0 * vel_in_normal / ((1.0 / m1) + (1.0 / m2));
 
-            sphere1.force.0 -= impulse / time.delta_seconds();
-            sphere2.force.0 += impulse / time.delta_seconds();
+                sphere1.force.0 -= impulse / time.delta_seconds();
+                sphere2.force.0 += impulse / time.delta_seconds();
 
-            sphere1.position.0 += aabb1.overlap_push_in_direction(&aabb2, normal);
+                sphere1.position.0 += len_dif * separation_dir;
+            }
         }
     }
 }
@@ -279,12 +283,11 @@ fn calculate_collision_normal(aabb1: &AABB, aabb2: &AABB) -> Vec3 {
     let center2 = (aabb2.min + aabb2.max) * 0.5;
     let difference = center1 - center2;
 
-    return difference.normalize();
-    // if difference.x.abs() > difference.y.abs() && difference.x.abs() > difference.z.abs() {
-    //     Vec3::new(difference.x.signum(), 0.0, 0.0)
-    // } else if difference.y.abs() > difference.x.abs() && difference.y.abs() > difference.z.abs() {
-    //     Vec3::new(0.0, difference.y.signum(), 0.0)
-    // } else {
-    //     Vec3::new(0.0, 0.0, difference.z.signum())
-    // }
+    if difference.x.abs() > difference.y.abs() && difference.x.abs() > difference.z.abs() {
+        Vec3::new(difference.x.signum(), 0.0, 0.0)
+    } else if difference.y.abs() > difference.x.abs() && difference.y.abs() > difference.z.abs() {
+        Vec3::new(0.0, difference.y.signum(), 0.0)
+    } else {
+        Vec3::new(0.0, 0.0, difference.z.signum())
+    }
 }
