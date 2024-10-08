@@ -12,7 +12,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .insert_resource(SphereSpawnTimer {
-            timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+            timer: Timer::from_seconds(0.50, TimerMode::Repeating),
         })
         .add_systems(
             Update,

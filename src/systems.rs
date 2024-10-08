@@ -122,7 +122,7 @@ fn spawn_ball(
         PhysicsSphere {
             position: Position(initial_position),
             radius: 0.5,
-            mass: Mass(1.0),
+            mass: Mass(3.0),
             velocity: Velocity(Vec3::ZERO),
             force: Force(Vec3::ZERO),
             aabb: AABB::new(initial_position, half_extents),
@@ -158,7 +158,7 @@ fn spawn_lights(commands: &mut Commands) {
 
 fn spawn_camera(commands: &mut Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 8.5, 19.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 6.5, 25.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
     });
 }
@@ -201,27 +201,27 @@ pub fn handle_input(
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
         for mut physics_sphere in query.iter_mut() {
-            physics_sphere.force.0.y += 200.0; // Add a force to the cube to a positive value when space is pressed
+            physics_sphere.force.0.y += 600.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::KeyW) {
         for mut physics_sphere in query.iter_mut() {
-            physics_sphere.force.0.z -= 10.0; // Add a force to the cube to a positive value when space is pressed
+            physics_sphere.force.0.z -= 25.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::KeyS) {
         for mut physics_sphere in query.iter_mut() {
-            physics_sphere.force.0.z += 10.0; // Add a force to the cube to a positive value when space is pressed
+            physics_sphere.force.0.z += 25.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::KeyD) {
         for mut physics_sphere in query.iter_mut() {
-            physics_sphere.force.0.x += 10.0; // Add a force to the cube to a positive value when space is pressed
+            physics_sphere.force.0.x += 25.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
     if keyboard_input.pressed(KeyCode::KeyA) {
         for mut physics_sphere in query.iter_mut() {
-            physics_sphere.force.0.x -= 10.0; // Add a force to the cube to a positive value when space is pressed
+            physics_sphere.force.0.x -= 25.0; // Add a force to the cube to a positive value when space is pressed
         }
     }
 }
