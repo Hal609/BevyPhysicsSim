@@ -31,12 +31,12 @@ xcode-select --install
 
 ### Building for Linux and MacOS
 
-Follow these steps to build the Raytrace Renderer:
+Follow these steps to build the app:
 
 1. Clone the repository:
 ```
 git clone https://github.com/Hal609/BevyPhysicsSim.git
-cd raytrace-renderer
+cd BevyPhysicsSim
 ```
 2. Build the project
    1. Option 1: Using the shell script.
