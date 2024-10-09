@@ -1,3 +1,4 @@
 target/
 *.app
 /myicon1024.png
+.DS_Store
