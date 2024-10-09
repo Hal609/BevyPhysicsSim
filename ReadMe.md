@@ -38,12 +38,14 @@ git clone https://github.com/Hal609/BevyPhysicsSim.git
 cd BevyPhysicsSim
 ```
 2. Build the project
-   1. Option 1: Using the shell script.
+   
+   **Option 1. Using the shell script:**
     ```
     ./app_build_mac.sh
     ```
 
-    2. Option 2: Manual build (See ![this documentation](https://bevy-cheatbook.github.io/platforms/macos.html) for more details).
+   **Option 2. Manual build (See [this documentation](https://bevy-cheatbook.github.io/platforms/macos.html) for more details):**
+   
     Create the folder structure
     ```
     mkdir -p "ThreeDSim.app/Contents/MacOS"
