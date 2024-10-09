@@ -7,15 +7,12 @@ Example scene:
 
 ### Features
 
-- Near real-time ray tracing rendering.
-- Support for multiple light sources.
-- Scenes can be modified using external text files.
-- Implementation of shadows, reflections, and specular highlights.
-- Cross-platform compatibility with SDL2.
+- Interactive ball simulation.
+- Simple 3D physics.
 
 ## Dependencies
 
-To build and run the Raytrace Renderer, you need the following dependencies:
+To build the app, you need the following dependencies:
 
 - Rust compilier (cargo)
 
@@ -25,7 +22,7 @@ To build and run the Raytrace Renderer, you need the following dependencies:
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-2. (May be required) Ensure Xcode command-line tools are installed
+2. (May be required) Install Xcode command-line tools
 ```
 xcode-select --install
 ```
