@@ -1,6 +1,6 @@
 # Rust Physics Sim
 
-An interactive 3D physics simulation implemented in Rust using the Bevy Engine
+A custom interactive 3D physics simulation implemented in Rust using the Bevy Engine
 
 ![screen-gif](./output.gif)
 
