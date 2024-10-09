@@ -2,7 +2,6 @@
 
 An interactive 3D physics simulation implemented in Rust using the Bevy Engine
 
-Example scene:
 ![screen-gif](./output.gif)
 
 ### Features
